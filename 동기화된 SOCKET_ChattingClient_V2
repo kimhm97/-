@@ -1,0 +1,67 @@
+import java.net.*; //java . 디렉토리안에 있는 net의 .* 모든파일을 갖고와라 
+import java.io.*;  //입출력관련
+import java.util.*; //다양한 툴들이 가지고있는 패키지  
+
+public class ChattingClient {
+
+	public static void main(String[] args) throws Exception {
+		System.out.println("클라이언트가 서버와의 통신을 준비합니다.");
+		Socket socket = new Socket("localhost", 8000); //서버와 포트번호를 주면 연결까지 일괄처리를 해준다.localhost는 내컴퓨터라는 뜻 
+		System.out.println("서버와의 연결에 성공했습니다.");
+	
+		System.out.println("서버와의 송수신을 위한 스트리밍 객체를 생성합니다.");
+		BufferedReader receiveString = new BufferedReader(new InputStreamReader(socket.getInputStream())); // 상대방한테 받은 데이터, 즉 어플리케이션한테 던져진 데이터를 받을 수 있는 객체  
+		BufferedWriter sendString = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())); //보내는 객체 
+		// API를 이용하여 주고받는 채널을 뚫음. 
+		
+		System.out.println("서버로 보낼 메세지를 입력하면 됩니다.");
+		Scanner keyboardInput = new Scanner(System.in);// System.in 특별히 손을 안대면 키보드입력을 처리해라. 라는뜻 키보드 입력을 처리해주는 객체 만듦 
+		
+		System.out.println("사용하실 ID를 입력해 주세요");
+		String chattingID = keyboardInput.nextLine(); 
+		
+		sendString.write("<name>" +chattingID+ "</name>\n"); //자체 규약. 태그로 보내기
+		sendString.flush(); //바로 보내주는걸로 오류적게 만들기
+		
+		String msg = receiveString.readLine();
+		System.out.println("서버로부터 {" +msg+ "} 를 수신했습니다");
+		
+		while(true) {
+			System.out.println("서버로 보낼 메세지를 입력하면 됩니다.");
+			msg =  keyboardInput.nextLine(); 
+			
+			System.out.println("서버로부터 {" +msg+ "} 를 수신했습니다");
+			
+			if(msg.equalsIgnoreCase("bye")) //대소문자 구별하지 않고 bye문자를 입력할때까지 와일문을 돌겠다. 
+			{
+				System.out.println("서버와의 채팅을 종료하겠습니다");
+				sendString.write("<quit>"); //애는 내용물이 없어 끝나는 태그가 없다. 서버에서 끝내고 싶은것을 인지하는것 
+				sendString.flush(); 
+				break;
+			}
+			
+			sendString.write("<msg>[" +chattingID+ "]</msg>\n"); //채팅아이디는 규약하고 상관없음 그냥 누가 보냈는지 알려주는거 
+			sendString.flush();
+			
+			msg = receiveString.readLine();
+			System.out.println("서버로부터 {" +msg+ "} 를 수신했습니다");
+		}
+		
+		/*
+		String msg = KeyboardInput.nextLine(); // 객체에있는 기능인 .nextLine() 엔터칠때까지의 데이터를 받아서  String형태의 msg에 담는다.  
+		System.out.println("서버로 보낼 메세지는 < " + msg + "> 입니다");
+		
+		System.out.println("서버로 메세지를 전송합니다.");
+		sendString.write(msg + "\n");  //Output하는것 Writer메소드를 사용 
+		sendString.flush(); //네트워크 카드에 데이터를 집어넣으면 네트워크 카드가 알아서 보낸다. 그러면 언제 보낼지 모르기때문에 강제로 지금 좀 보내라고해주는것이다. 
+		
+		System.out.println("서버로부터 메시지 전송을 기다립니다.");
+		msg = receiveString.readLine();  //서버 메시지 받았는지 확인
+		System.out.println("서버로부터 < " + msg + "> 를 수신했습니다."); //받은메세지 출력 
+		*/
+		
+		System.out.println("소켓을 종료합니다.");
+		keyboardInput.close(); 
+		socket.close();
+	}
+}
