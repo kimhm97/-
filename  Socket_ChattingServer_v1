@@ -1,0 +1,39 @@
+import java.io.*;
+import java.net.*;
+
+public class ChattingServer {
+
+	public static void main(String[] args) throws Exception {
+		ServerSocket serverSocket = null; //실제로 데이터를 주고받는것은 아니고 연결 접속 요구를 기다리고 접속요구에 대해서 실제로 데이터를 주고 받을 소켓을 만들어주는 역할만 한다.  
+		System.out.println("서버가 곧 동작을 시작합니다.");
+		serverSocket = new ServerSocket(8000); //대기도 아니고 어떤 포트를 점유하겠다라는 정도임 
+		System.out.println("서버가 8000번 포트를 점유했습니다."); //클라이언트가 요청을 하더라도 받을 수 있는 준비는 안되었다. 즉 가게를 열기 위해서 터잡고 인테리어는 끝났으나 아직 점원들이 없음. 
+
+		System.out.println("서버가 클라이언트의 접속 요청을 기다리고 있습니다.");
+		Socket clientSocket = serverSocket.accept(); //요청이 들어오면 클라이언트와 데이터를 주고받을 소켓을 새로 만들어서 주게 되는 메서드 
+		System.out.println("서버가 클라이언트의 접속 요청을 받고, 해당 클라이언트를 위한 소켓을 생성했습니다.");
+		
+		System.out.println("클라이언트와의 송수신을 위한 스트리밍 객체를 생성합니다.");
+		BufferedReader receiveString = new BufferedReader(new InputStreamReader(clientSocket.getInputStream())); 
+		BufferedWriter sendString = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));  
+		//getOutputStream, getOutputStream 바이트단위로 데이터 읽어줌
+		// 문자단위로 처리할 수 있게 BufferedReader,BufferedWriter사용함,  비트나 바이트 단위의 데이터를 주고받거나 할거면 거기에 맞는 다른것이 존재한다. 
+		 
+		System.out.println("클라이언트로부터의 데이터 전송을 기다리고 있습니다.");
+		String msg = receiveString.readLine(); 
+		
+		System.out.println("클라이언트가 전송한 데이터는 < " + msg + "> 입니다.");
+		Thread.sleep(1000); // 시각적으로 왔다갔다하는 것이 덜 느껴짐으로 1초 쉬게 만듦
+		
+		System.out.println("클라이언트로 전송 받은 데이터를 송신합니다.");
+		sendString.write("echo : " + msg + "\n");
+		sendString.flush();
+		
+		Thread.sleep(2000); //2초정도 쉬면 클라이언트가 자동으로 접속이 종료될 수도 있어서 클로즈 안해도 될 수도 있다. 
+		//System.out.println("클라이언트와의 접속을 종료합니다.");
+		//clientSocket.close();
+		System.out.println("서버를 종료합니다.");
+		serverSocket.close(); // 서버는 클로우즈 해줘야함. 안그러면 포트를 점유하고 있는 상황이 계속 이루어지기때문에 다른 프로그램에서 문제가 될 수도 있다. 
+	
+	}
+}
