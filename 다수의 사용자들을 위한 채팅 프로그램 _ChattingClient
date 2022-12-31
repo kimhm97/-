@@ -1,0 +1,83 @@
+import java.net.*;
+import java.io.*;
+import java.util.*;
+
+class RecevingThread implements Runnable
+{
+	Socket clientSocket = null;
+	
+	RecevingThread(Socket clientSocket)
+	{
+		this.clientSocket = clientSocket;
+	}
+
+	public void run()
+	{
+		System.out.println("수신 전용 thread가 시작됩니다");
+		
+		try
+		{
+			BufferedReader receiveString = new BufferedReader(new InputStreamReader(this.clientSocket.getInputStream()));
+
+			while(true)
+			{
+				String msg = receiveString.readLine();
+
+				System.out.println("서버로부터 <" + msg + "> 를 수신했습니다");
+			}
+		}
+		catch(IOException e)
+		{
+			System.out.println("통신 준비중 네트워크 오류가 발생했습니다");
+			System.out.println(e);
+		}
+	}	
+}
+
+public class ChattingClient {
+
+	public static void main(String[] args) throws Exception {
+		// TODO Auto-generated method stub
+		Socket socket = new Socket("localhost", 8000);
+		System.out.println("서버와의 연결에 성공했습니다");
+		
+		BufferedReader receiveString = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		BufferedWriter sendString = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+		Scanner keyboardInput = new Scanner(System.in);
+
+		System.out.println("사용하실 ID를 입력해 주세요");
+		String chattingID = keyboardInput.nextLine();
+		
+		sendString.write(chattingID + "\n");
+		sendString.flush();
+
+		String msg = receiveString.readLine();
+		System.out.println("서버로부터 <" + msg + "> 를 수신했습니다");
+		
+		RecevingThread recevingThread = new RecevingThread(socket);
+		new Thread(recevingThread).start();
+		
+		while(true)
+		{
+			System.out.println("서버로 보낼 메세지를 입력하면 됩니다");
+			System.out.println("종료를 원하시면, bye (대소문자 구분 없습니다)을 입력해주세요");
+			msg = keyboardInput.nextLine();
+			
+			System.out.println("서버로 보낼 메세지는 <" + msg + "> 입니다");
+	
+			sendString.write("[" + chattingID + "]" + msg + "\n");
+			sendString.flush();
+	
+			if(msg.equalsIgnoreCase("bye"))
+			{
+				System.out.println("서버와의 채팅을 종료하겠습니다");
+				break;
+			}
+		}
+		
+		System.out.println("소켓을 종료합니다");
+		keyboardInput.close();
+		socket.close();
+	}
+
+}
