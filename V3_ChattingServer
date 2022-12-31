@@ -1,0 +1,185 @@
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
+class RecevingThread implements Runnable
+{
+	Socket clientSocket = null;
+	String clientID;
+	ClientThead clientThread;
+	
+	RecevingThread(ClientThead clientThread)
+	{
+		this.clientThread = clientThread;
+		this.clientSocket = clientThread.getClientSocket();
+		this.clientID = clientThread.getClientID();
+	}
+
+	public void run()
+	{
+		System.out.println("수신 전용 thread가 시작됩니다");
+	
+		try
+		{
+			BufferedReader receiveString = new BufferedReader(new InputStreamReader(this.clientSocket.getInputStream()));
+			BufferedWriter sendString = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+
+			while(true)
+			{
+				String msg = receiveString.readLine();
+
+				System.out.println("클라이언트로부터 {" + msg + "} 를 수신했습니다");
+				
+				if(msg.startsWith("<quit>"))
+				{
+					System.out.println("클라이언트가 채팅 종료를 원하고 있습니다");
+					clientThread.setIsTerminated(true);
+					break;
+				}
+
+				if(!msg.startsWith("<msg>"))
+				{
+					sendString.write("<error>code = 2, msg = msg tag를 가진 메세지가 수신되지 않았습니다</error>\n");
+					sendString.flush();
+					continue;				
+				}
+				
+			}
+		}
+		catch(IOException e)
+		{
+			System.out.println("통신 준비중 네트워크 오류가 발생했습니다");
+			System.out.println(e);
+		}
+	}	
+}
+
+class ClientThead implements Runnable
+{
+	boolean isTerminated = false;
+	Socket clientSocket;
+	String clientID;
+	
+	ClientThead(Socket clientSocket)
+	{
+		this.clientSocket = clientSocket;
+	}	
+	
+	public void run()
+	{
+		try 
+		{
+			Scanner keyboardInput = new Scanner(System.in);;
+	
+			BufferedReader receiveString = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			BufferedWriter sendString = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+	
+			String msg;
+		
+			while(true)
+			{
+				System.out.println("클라이언트로부터 ID 전송을 기다리고 있습니다");
+				msg = receiveString.readLine();
+				
+				if(msg.startsWith("<name>"))
+				{
+					int endTagIndex = msg.indexOf("</name>");
+					clientID = msg.substring("<name>".length(), endTagIndex);
+					break;
+				}
+
+				sendString.write("<error>code = 1, msg = name tag를 가진 채팅 아이디를 먼저 보내주셔야 합니다</error>\n");
+				sendString.flush();
+
+			}
+			
+			System.out.println(clientID + "님이 채팅을 요청하셨습니다");
+				
+			msg = "<msg>반갑습니다 [" + clientID + "]님</msg>";
+			sendString.write(msg + "\n");
+			sendString.flush();
+	
+			RecevingThread recevingThread = new RecevingThread(this);
+			new Thread(recevingThread).start();
+			
+			while(true)
+			{
+				msg = "<msg>[서버]" + keyboardInput.nextLine() + "</msg>";
+				System.out.println(msg);
+	
+				if(isTerminated) break;
+				
+				sendString.write(msg + "\n");
+				sendString.flush();
+				
+			}
+			
+			Thread.sleep(2000);
+			keyboardInput.close();
+			System.out.println("클라이언트와의 접속을 종료합니다");
+			clientSocket.close();
+
+		}
+		catch(Exception e)
+		{
+			System.out.println("통신 준비중 네트워크 오류가 발생했습니다");
+			System.out.println(e);
+		}
+		
+	}
+	Socket getClientSocket()
+	{
+		return clientSocket;
+	}
+	
+	String getClientID()
+	{
+		return clientID;
+	}
+	
+	void setIsTerminated(boolean isTerminated)
+	{
+		this.isTerminated = isTerminated;
+	}	
+}
+
+public class ChattingServer {
+
+	static boolean isTerminated = false;
+	
+	public static void main(String[] args) throws Exception
+	{
+		// TODO Auto-generated method stub
+		ServerSocket serverSocket = null;
+		System.out.println("서버가 곧 동작을 시작합니다");
+		serverSocket = new ServerSocket(8000);
+
+		Scanner keyboardInput = new Scanner(System.in);
+
+		while(true)
+		{
+			System.out.println("서버가 클라이언트의 접속 요청을 기다리고 있습니다");
+			Socket clientSocket = serverSocket.accept();
+			System.out.println("서버가 클라이언트의 접속 요청을 받고, 해당 클라이언트를 위한 소켓을 생성했습니다");
+
+			new Thread(new ClientThead(clientSocket)).start();
+
+			System.out.println("서버를 종료하고자 하시면 quit를 입력하세요");
+			String cmd = keyboardInput.nextLine();
+			
+			if(cmd.equalsIgnoreCase("quit"))
+			{
+				System.out.println("서버를 종료하겠습니다");
+				break;
+			}
+		}
+			
+
+		Thread.sleep(2000);
+		keyboardInput.close();
+
+		System.out.println("서버를 종료합니다");
+		serverSocket.close();
+	}
+	
+}
